@@ -10,6 +10,9 @@ architecture validateANNN of cmd is
 signal q : std_ulogic_vector (31 downto 0);
 signal A, firstN, secondN, thirdN : std_ulogic_vector(7 downto 0);
 signal ANNNvalid : std_ulogic ; // 1 means valid ANNN , 0 Means invalid ANNN
+signal 1N ,2N ,3N : std_ulogic_vector(3 downto 0);
+signal 12bit : std_ulogic ; // 12 bits containing the ascii to BCD values of NNN
+
     
 begin
     A <= q(31 downto 24);
@@ -58,6 +61,18 @@ begin
                 ANNNvalid <= 1;
         end if;
     end process;
+
+
+    // process to convert ascii to bcd
+    AsciiBCD : process (ANNNvalid) // what should the sensitivity list be ?
+    begin 
+            if ANNNvalid =  '1' then
+                1N <= firstN(3 downto 0) ;
+                2N <= seconN(3 downto 0) ;
+                3N <= thirdN(3 downto 0) ;
+                12bit <= 1N & 2N & 3N ; // combines the 3X4 bits to make 12 bit NNN
+            end if 
+    end process 
 end
                 
             

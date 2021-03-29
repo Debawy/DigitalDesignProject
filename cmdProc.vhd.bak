@@ -29,6 +29,8 @@ signal ANNNflag: std_logic;
 signal rcvreg_32:std_logic_vector(31 downto 0);
 signal nobytessent: integer range 0 to 2;
 signal hexreg: std_logic_vector(15 downto 0);
+signal A,N1,N2,N3: std_logic_vector(7 downto 0);
+signal Int1,Int2,Int3: integer;  
 begin
   cmd_nextstate: process(curstate_cmd,rxnow,txdone,ANNNflag,dataReady,seqDone)
   begin
@@ -83,10 +85,18 @@ begin
             end if;
          else
             nxstate_cmd <= WAITFORTRANSMISION;
+         end if;
       when OTHERS => 
          nxstate_cmd <= INTIAL;
       end case;
    end process;
-              
-                                                
-end Dataflow;
+   shiftreg32: process(clk,curstate_cmd,rxnow)
+   begin
+   if rising_edge(clk) then
+      if reset = '1' then
+         rcvreg_32 <= (others => '0');
+      elsif (curstate_cmd = INTIAL and rxnow = '1') then
+         rcvreg_32 <= rcvreg_32(23 downto 0) & rxData;
+      end if;       
+   end if;
+   end process;

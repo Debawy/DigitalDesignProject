@@ -83,7 +83,6 @@ begin
             end if;
          else
             nxstate_cmd <= WAITFORTRANSMISION;
-         end if;
       when OTHERS => 
          nxstate_cmd <= INTIAL;
       end case;

@@ -29,8 +29,6 @@ signal ANNNflag: std_logic;
 signal rcvreg_32:std_logic_vector(31 downto 0);
 signal nobytessent: integer range 0 to 2;
 signal hexreg: std_logic_vector(15 downto 0);
-signal A,N1,N2,N3: std_logic_vector(7 downto 0);
-signal Int1,Int2,Int3: integer;  
 begin
   cmd_nextstate: process(curstate_cmd,rxnow,txdone,ANNNflag,dataReady,seqDone)
   begin
@@ -100,4 +98,29 @@ begin
       end if;       
    end if;
    end process;
-end dataflow;
+   ANNNValidate : process(rcvreg_32)--Asynchronous
+   variable A, N1, N2, N3 : std_logic_vector(7 downto 0);
+   variable Int1, Int2, Int3: integer ;
+   begin
+      A := rcvreg_32(31 downto 24);
+      N1 := rcvreg_32(23 downto 16);
+      N2 := rcvreg_32(15 downto 8);
+      N3 := rcvreg_32(7 downto 0);
+      int1 := to_integer(unsigned(N1));
+      int2 := to_integer(unsigned(N2));
+      int3 := to_integer(unsigned(N3));           
+      ANNNflag <= '0';
+      if  (A = "01000000" 
+          or A = "01100001") 
+          and (N1(7 downto 4) = "0011" 
+          and N2(7 downto 4) = "0011" 
+          and N3(7 downto 4) = "0011") 
+          and (int1<10 
+          and int2<10 
+          and int3<10 
+          and int1 + int2 +int3 /= 0) 
+          then
+         ANNNflag <= '1';        
+      end if; 
+   end process;                                           
+end Dataflow;

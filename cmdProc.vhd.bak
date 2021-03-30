@@ -29,6 +29,7 @@ signal ANNNflag: std_logic;
 signal rcvreg_32:std_logic_vector(31 downto 0);
 signal nobytessent: integer range 0 to 2;
 signal hexreg: std_logic_vector(15 downto 0);
+signal bcdreg12: std_logic_vector(11 downto 0);
 begin
   cmd_nextstate: process(curstate_cmd,rxnow,txdone,ANNNflag,dataReady,seqDone)
   begin
@@ -106,20 +107,33 @@ begin
       N1 := rcvreg_32(23 downto 16);
       N2 := rcvreg_32(15 downto 8);
       N3 := rcvreg_32(7 downto 0);
-      int1 := to_integer(unsigned(N1));
-      int2 := to_integer(unsigned(N2));
-      int3 := to_integer(unsigned(N3));           
+      int1 := to_integer(unsigned(N1(3 downto 0)));
+      int2 := to_integer(unsigned(N2(3 downto 0)));
+      int3 := to_integer(unsigned(N3(3 downto 0)));           
       ANNNflag <= '0';
-      if  A = "01000000" 
-          or A = "01100001" 
+      if  (A = "01000000" 
+          or A = "01100001") 
+          and (N1(7 downto 4) = "0011" 
           and N2(7 downto 4) = "0011" 
-          and N3(7 downto 4) = "0011" 
-          and int1<10 
+          and N3(7 downto 4) = "0011") 
+          and (int1<10 
           and int2<10 
           and int3<10 
-          and int1 + int2 +int3 /= 0 
+          and int1 + int2 +int3 /= 0) 
           then
-         ANNNflag <= '1';        
+            ANNNflag <= '1';        
+      end if; 
+   end process;
+   ASCIITOBCD : process (ANNNflag)-- what should the sensitivity list be ?
+   variable N1, N2, N3 : std_logic_vector(7 downto 0);
+   begin 
+   N1 := rcvreg_32(23 downto 16);
+   N2 := rcvreg_32(15 downto 8);
+   N3 := rcvreg_32(7 downto 0);
+      if ANNNflag =  '1' then
+         numWords_bcd <= (N1(3 downto 0),N2(3 downto 0),N3(3 downto 0));
+      else
+         numWords_bcd <= (others => '0')
       end if; 
    end process;                                           
 end Dataflow;

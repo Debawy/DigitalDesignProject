@@ -25,7 +25,7 @@ end CommandProcessor;
 architecture dataflow of CommandProcessor is
 type CMD_STATE_TYPE is (INTIAL,ECHO,ANNNCHECK,WAITFORDP,SENDBYTES,WAITFORTRANSMISION);
 signal curstate_cmd, nxstate_cmd:CMD_STATE_TYPE;
-signal ANNNflag: std_logic;
+signal ANNNflag, seqdonereg: std_logic;
 signal rcvreg_32:std_logic_vector(31 downto 0);
 signal nobytessent: integer range 0 to 2;
 signal hexreg: std_logic_vector(15 downto 0);
@@ -73,7 +73,7 @@ begin
          txnow <= '0';
          if txdone = '1' then
             if nobytessent = 2 then
-               if seqDone = '1' then 
+               if seqdonereg = '1' then 
                   nxstate_cmd <= INTIAL;
                else
                   start <= '1';
@@ -133,7 +133,66 @@ begin
       if ANNNflag =  '1' then
          numWords_bcd <= (N1(3 downto 0),N2(3 downto 0),N3(3 downto 0));
       else
-         numWords_bcd <= (others => '0')
+         numWords_bcd <= ("0000","0000","0000");
       end if; 
-   end process;                                           
+   end process;
+  CounterReg: process(clk)
+  begin
+  if rising_edge(clk) then
+     if reset = '1' then
+         nobytessent <= 0;
+     else
+        CASE curstate_cmd is
+           when WAITFORDP =>
+              nobytessent <= 0;
+           when SENDBYTES =>
+              nobytessent <= nobytessent + 1;
+           when OTHERS =>
+              nobytessent <= nobytessent;
+        END CASE;
+    end if;
+  end if;
+  end process;
+  ByteToHexreg:process(clk)
+  variable int1 : integer;
+  variable int2 : integer;
+  variable below10 : std_logic_vector(3 downto 0) := "0011";
+  variable above10 : std_logic_vector(3 downto 0) := "0100";
+  begin
+  if rising_edge(clk) then 
+     if reset = '1' then
+         hexreg <= (others => '0');
+     elsif curstate_cmd = WAITFORDP and dataReady = '1' then
+         int1 := to_integer(unsigned(byte(7 downto 4)));
+         int2 := to_integer(unsigned(byte(3 downto 0)));
+         if int1<10 then
+            hexreg(15 downto 8) <= below10 & byte(7 downto 4);
+         else
+            int1 := int1 - 9;
+            hexreg(15 downto 8) <= above10 & std_logic_vector(to_unsigned(int1,4));--https://www.nandland.com/vhdl/tips/tip-convert-numeric-std-logic-vector-to-integer.html#Numeric-Integer-To-Unsigned
+         end if;
+         if int2 < 10 then
+            hexreg(7 downto 0) <= below10 & byte(7 downto 4);
+         else
+            int2 := int2 - 9;
+            hexreg(7 downto 0) <= above10 & std_logic_vector(to_unsigned(int2,4));
+         end if;
+     elsif curstate_cmd = WAITFORTRANSMISION and txDone = '1' and nobytessent < 2 then 
+        hexreg(15 downto 0) <= hexreg(7 downto 0) & "00000000";
+     end if;
+  end if;
+  end process;
+  SeqdoneLatch : process(clk)
+  begin
+     if rising_edge(clk) then
+        if reset = '1' then
+           SeqDoneReg <= '0';
+        elsif seqDone = '1' then
+           SeqDoneReg <= '1';
+        elsif curstate_cmd = INTIAL then 
+           SeqDoneReg <= '0';
+        end if;
+      end if;
+  end process; 
+                                                                        
 end Dataflow;
